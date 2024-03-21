@@ -17,7 +17,11 @@ def main():
     turtle.penup()
     turtle.goto(0, -200)
     turtle.pendown()
-    draw_tree(150, 7)
+    
+    # Запит у користувача для введення рівня рекурсії
+    level = int(input("Введіть рівень рекурсії (ціле число): "))
+    
+    draw_tree(150, level)
     turtle.mainloop()
 
 if __name__ == "__main__":

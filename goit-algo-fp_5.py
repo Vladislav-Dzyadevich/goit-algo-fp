@@ -1,96 +1,97 @@
-import matplotlib.pyplot as plt
-import random
+import uuid
 import networkx as nx
+import matplotlib.pyplot as plt
 
-class TreeNode:
-    def __init__(self, value):
-        self.value = value
+class Node:
+    def __init__(self, key, color="skyblue"):
         self.left = None
         self.right = None
+        self.val = key
+        self.color = color  # Додатковий аргумент для зберігання кольору вузла
+        self.id = str(uuid.uuid4())  # Унікальний ідентифікатор для кожного вузла
 
-def insert(root, value):
-    if root is None:
-        return TreeNode(value)
-    else:
-        if value < root.value:
-            root.left = insert(root.left, value)
-        else:
-            root.right = insert(root.right, value)
-    return root
+def add_edges(graph, node, pos, x=0, y=0, layer=1):
+    if node is not None:
+        graph.add_node(node.id, color=node.color, label=node.val)  # Використання id та збереження значення вузла
+        if node.left:
+            graph.add_edge(node.id, node.left.id)
+            l = x - 1 / 2 ** layer
+            pos[node.left.id] = (l, y - 1)
+            l = add_edges(graph, node.left, pos, x=l, y=y - 1, layer=layer + 1)
+        if node.right:
+            graph.add_edge(node.id, node.right.id)
+            r = x + 1 / 2 ** layer
+            pos[node.right.id] = (r, y - 1)
+            r = add_edges(graph, node.right, pos, x=r, y=y - 1, layer=layer + 1)
+    return graph
 
-def inorder_traversal(root, colors):
-    if root:
-        colors[root.value] = random_color()
-        inorder_traversal(root.left, colors)
-        print("Visiting node:", root.value, "Color:", colors[root.value])
-        inorder_traversal(root.right, colors)
+def draw_tree(tree_root):
+    tree = nx.DiGraph()
+    pos = {tree_root.id: (0, 0)}
+    tree = add_edges(tree, tree_root, pos)
 
-def breadth_first_traversal(root, colors):
-    queue = [root]
-    while queue:
-        node = queue.pop(0)
-        if node:
-            colors[node.value] = random_color()
-            print("Visiting node:", node.value, "Color:", colors[node.value])
-            queue.append(node.left)
-            queue.append(node.right)
+    colors = [node[1]['color'] for node in tree.nodes(data=True)]
+    labels = {node[0]: node[1]['label'] for node in tree.nodes(data=True)}  # Використовуйте значення вузла для міток
 
-def random_color():
-    return "#{:02x}{:02x}{:02x}".format(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-
-# Функція для створення бінарного дерева зі списку значень
-def create_binary_tree(values):
-    root = None
-    for value in values:
-        root = insert(root, value)
-    return root
-
-# Функція для візуалізації бінарного дерева
-def visualize_binary_tree(root, colors):
-    G = nx.Graph()
-    add_tree_edges(G, root)
-    pos = position_tree(G, root)
-    nx.draw(G, pos=pos, with_labels=True, node_color=[colors[node] for node in G.nodes()], node_size=2000, font_size=12)
+    plt.figure(figsize=(8, 5))
+    nx.draw(tree, pos=pos, labels=labels, arrows=False, node_size=2500, node_color=colors)
     plt.show()
 
-# Функція для додавання ребер у граф, яке представляє бінарне дерево
-def add_tree_edges(G, root):
-    if root:
-        if root.left:
-            G.add_edge(root.value, root.left.value)
-            add_tree_edges(G, root.left)
-        if root.right:
-            G.add_edge(root.value, root.right.value)
-            add_tree_edges(G, root.right)
+def dfs_traversal(node, visited=None, step=0):
+    if visited is None:
+        visited = set()
+    
+    if node is None:
+        return
 
-# Функція для визначення позицій вершин у графі
-def position_tree(G, root, level=0, pos=None, width=2.5):
-    if pos is None:
-        pos = {root.value: (0, 0)}
-    else:
-        pos[root.value] = (pos[root.parent.value][0] + width * (-1) ** level, -level)
+    visited.add(node)
+    node.color = generate_color(step)
+    
+    print(node.val, end=" ")
+    
+    dfs_traversal(node.left, visited, step + 1)
+    dfs_traversal(node.right, visited, step + 1)
 
-    if root.left:
-        root.left.parent = root
-        position_tree(G, root.left, level + 1, pos, width / 2)
-    if root.right:
-        root.right.parent = root
-        position_tree(G, root.right, level + 1, pos, width / 2)
+def bfs_traversal(root):
+    queue = [(root, 0)]
+    visited = set()
 
-    return pos
+    while queue:
+        node, step = queue.pop(0)
+        if node not in visited:
+            visited.add(node)
+            node.color = generate_color(step)
+            
+            print(node.val, end=" ")
+            
+            if node.left:
+                queue.append((node.left, step + 1))
+            if node.right:
+                queue.append((node.right, step + 1))
 
-# Приклад використання:
-values = [5, 3, 8, 1, 4, 7, 9]
-tree_root = create_binary_tree(values)
+def generate_color(step):
+    # Генерує колір на основі послідовності кроку обходу
+    # Початковий колір: #000000 (чорний)
+    hex_color = format(int(16777215 * step / 255), 'x').zfill(6)
+    return '#' + hex_color
 
-# Для візуалізації збережемо кольори в словнику
-colors = {}
+# Створення дерева
+root = Node(0)
+root.left = Node(4)
+root.left.left = Node(5)
+root.left.right = Node(10)
+root.right = Node(1)
+root.right.left = Node(3)
 
-# Обходи дерева
-print("Inorder Traversal:")
-inorder_traversal(tree_root, colors)
-print("\nBreadth-first Traversal:")
-breadth_first_traversal(tree_root, colors)
+# Обхід у глибину та візуалізація
+print("Depth First Search:")
+dfs_traversal(root)
+draw_tree(root)
 
-# Візуалізація бінарного дерева
-visualize_binary_tree(tree_root, colors)
+# Скидання кольорів
+reset_colors(root)
+
+# Обхід у ширину та візуалізація
+print("\nBreadth First Search:")
+bfs_traversal(root)
+draw_tree(root)
